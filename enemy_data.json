@@ -1,1 +1,213 @@
-{"Gokstad Officer": {"shield_type": "None", "health_type": "Cloned Flesh", "base_armor": 1000, "base_level": 8, "armor_type": "Ferrite", "base_shield": 0, "base_health": 1000, "enemy_type": "ET_NORMAL"}, "Demolisher Heavy Gunner": {"base_health": 2000.0, "base_armor": 200.0, "base_shield": 0.0, "base_level": 1.0, "base_dr": 1.0, "health_type": "Cloned Flesh", "armor_type": "Ferrite", "shield_type": "None", "enemy_type": "ET_DEMOLISHER"}, "Demolisher Devourer": {"base_health": 2500.0, "base_armor": 50.0, "base_shield": 0.0, "base_level": 1.0, "base_dr": 1.0, "health_type": "Cloned Flesh", "armor_type": "Ferrite", "shield_type": "None", "enemy_type": "ET_DEMOLISHER"}, "Ancient": {"base_health": 100.0, "base_armor": 0.0, "base_shield": 0.0, "base_level": 1.0, "health_type": "Fossilized", "armor_type": "None", "shield_type": "None", "enemy_type": "ET_NORMAL"}, "Demolyst Heqet": {"base_health": 2000.0, "base_armor": 0.0, "base_shield": 200.0, "base_level": 1.0, "health_type": "Cloned Flesh", "armor_type": "None", "shield_type": "Shield", "enemy_type": "ET_DEMOLYST"}, "Corpus Tech": {"base_health": 700.0, "base_armor": 0.0, "base_shield": 250.0, "base_level": 15.0, "health_type": "Flesh", "armor_type": "None", "shield_type": "Proto Shield", "enemy_type": "ET_NORMAL"}, "Tenno": {"base_health": 250.0, "base_armor": 150.0, "base_shield": 0.0, "base_level": 1.0, "health_type": "Tenno Health", "armor_type": "Tenno Armor", "shield_type": "None", "enemy_type": "ET_NORMAL"}, "Infested Hemocyte": {"base_health": 726.0, "base_armor": 175.0, "base_shield": 0.0, "base_level": 10.0, "health_type": "Fossilized", "armor_type": "Infested Sinew", "shield_type": "None", "enemy_type": "ET_LEPHANTIS"}, "Corpus Hemocyte": {"base_health": 726.0, "base_armor": 175.0, "base_shield": 0.0, "base_level": 10.0, "health_type": "Fossilized", "armor_type": "Infested Sinew", "shield_type": "None", "enemy_type": "ET_LEPHANTIS"}, "Grineer Hemocyte": {"base_health": 748.0, "base_armor": 175.0, "base_shield": 0.0, "base_level": 10.0, "health_type": "Fossilized", "armor_type": "Infested Sinew", "shield_type": "None", "enemy_type": "ET_LEPHANTIS"}, "Auditor": {"base_health": 1000.0, "base_armor": 50.0, "base_shield": 2500.0, "base_level": 1.0, "health_type": "Robotic", "armor_type": "Alloy", "shield_type": "Shield", "enemy_type": "ET_NORMAL"}, "Eidolon Teralyst Shield": {"base_health": 1e-06, "base_armor": 0.0, "base_shield": 1500.0, "base_level": 1.0, "base_dr": 1.0, "health_type": "Machinery", "armor_type": "None", "shield_type": "Eidolon Shield", "enemy_type": "ET_EIDOLON"}, "Eidolon Teralyst": {"base_health": 9000.0, "base_armor": 125.0, "base_shield": 0.0, "base_level": 1.0, "base_dr": 1.0, "health_type": "Robotic", "armor_type": "Alloy", "shield_type": "None", "enemy_type": "ET_EIDOLON"}, "Eidolon Hydrolyst Shield": {"base_health": 1e-06, "base_armor": 0.0, "base_shield": 2000.0, "base_level": 1.0, "base_dr": 1.0, "health_type": "Machinery", "armor_type": "None", "shield_type": "Eidolon Shield", "enemy_type": "ET_EIDOLON"}, "Eidolon Hydrolyst": {"base_health": 12000.0, "base_armor": 150.0, "base_shield": 0.0, "base_level": 1.0, "base_dr": 1.0, "health_type": "Cloned Flesh", "armor_type": "Alloy", "shield_type": "None", "enemy_type": "ET_EIDOLON"}, "Eidolon Gantulyst": {"base_health": 10000.0, "base_armor": 130.0, "base_shield": 0.0, "base_level": 1.0, "base_dr": 1.0, "health_type": "Cloned Flesh", "armor_type": "Alloy", "shield_type": "None", "enemy_type": "ET_EIDOLON"}, "Eidolon Gantulyst Shield": {"base_health": 1e-06, "base_armor": 0.0, "base_shield": 1800.0, "base_level": 1.0, "base_dr": 1.0, "health_type": "Machinery", "armor_type": "None", "shield_type": "Eidolon Shield", "enemy_type": "ET_EIDOLON"}, "Armis Ulta": {"base_health": 1000.0, "base_armor": 50.0, "base_shield": 2500.0, "base_level": 1.0, "base_dr": 1.0, "health_type": "Flesh", "armor_type": "Alloy", "shield_type": "Shield", "enemy_type": "ET_NORMAL"}, "Arid Heavy Gunner": {"base_health": 300.0, "base_armor": 500.0, "base_shield": 0.0, "base_level": 8.0, "base_dr": 1.0, "health_type": "Cloned Flesh", "armor_type": "Ferrite", "shield_type": "None", "enemy_type": "ET_NORMAL"}, "Demolisher Expired": {"base_health": 1500.0, "base_armor": 50.0, "base_shield": 0.0, "base_level": 1.0, "base_dr": 1.0, "health_type": "Cloned Flesh", "armor_type": "Ferrite", "shield_type": "None", "enemy_type": "ET_DEMOLISHER"}}
+{
+    "Gokstad Officer": {
+        "shield_type": "None",
+        "health_type": "Cloned Flesh",
+        "base_armor": 1000,
+        "base_level": 8,
+        "armor_type": "Ferrite",
+        "base_shield": 0,
+        "base_health": 1000,
+        "enemy_type": "ET_NORMAL"
+    },
+    "Demolisher Heavy Gunner": {
+        "base_health": 2000.0,
+        "base_armor": 200.0,
+        "base_shield": 0.0,
+        "base_level": 1.0,
+        "base_dr": 1.0,
+        "health_type": "Cloned Flesh",
+        "armor_type": "Ferrite",
+        "shield_type": "None",
+        "enemy_type": "ET_DEMOLISHER"
+    },
+    "Demolisher Devourer": {
+        "base_health": 2500.0,
+        "base_armor": 50.0,
+        "base_shield": 0.0,
+        "base_level": 1.0,
+        "base_dr": 1.0,
+        "health_type": "Cloned Flesh",
+        "armor_type": "Ferrite",
+        "shield_type": "None",
+        "enemy_type": "ET_DEMOLISHER"
+    },
+    "Ancient": {
+        "base_health": 100.0,
+        "base_armor": 0.0,
+        "base_shield": 0.0,
+        "base_level": 1.0,
+        "health_type": "Fossilized",
+        "armor_type": "None",
+        "shield_type": "None",
+        "enemy_type": "ET_NORMAL"
+    },
+    "Demolyst Heqet": {
+        "base_health": 2000.0,
+        "base_armor": 0.0,
+        "base_shield": 200.0,
+        "base_level": 1.0,
+        "health_type": "Cloned Flesh",
+        "armor_type": "None",
+        "shield_type": "Shield",
+        "enemy_type": "ET_DEMOLYST"
+    },
+    "Corpus Tech": {
+        "base_health": 700.0,
+        "base_armor": 0.0,
+        "base_shield": 250.0,
+        "base_level": 15.0,
+        "health_type": "Flesh",
+        "armor_type": "None",
+        "shield_type": "Proto Shield",
+        "enemy_type": "ET_NORMAL"
+    },
+    "Tenno": {
+        "base_health": 250.0,
+        "base_armor": 150.0,
+        "base_shield": 0.0,
+        "base_level": 1.0,
+        "health_type": "Tenno Health",
+        "armor_type": "Tenno Armor",
+        "shield_type": "None",
+        "enemy_type": "ET_NORMAL"
+    },
+    "Infested Hemocyte": {
+        "base_health": 726.0,
+        "base_armor": 175.0,
+        "base_shield": 0.0,
+        "base_level": 10.0,
+        "health_type": "Fossilized",
+        "armor_type": "Infested Sinew",
+        "shield_type": "None",
+        "enemy_type": "ET_LEPHANTIS"
+    },
+    "Corpus Hemocyte": {
+        "base_health": 726.0,
+        "base_armor": 175.0,
+        "base_shield": 0.0,
+        "base_level": 10.0,
+        "health_type": "Fossilized",
+        "armor_type": "Infested Sinew",
+        "shield_type": "None",
+        "enemy_type": "ET_LEPHANTIS"
+    },
+    "Grineer Hemocyte": {
+        "base_health": 748.0,
+        "base_armor": 175.0,
+        "base_shield": 0.0,
+        "base_level": 10.0,
+        "health_type": "Fossilized",
+        "armor_type": "Infested Sinew",
+        "shield_type": "None",
+        "enemy_type": "ET_LEPHANTIS"
+    },
+    "Auditor": {
+        "base_health": 1000.0,
+        "base_armor": 50.0,
+        "base_shield": 2500.0,
+        "base_level": 1.0,
+        "health_type": "Robotic",
+        "armor_type": "Alloy",
+        "shield_type": "Shield",
+        "enemy_type": "ET_NORMAL"
+    },
+    "Eidolon Teralyst Shield": {
+        "base_health": 1e-06,
+        "base_armor": 0.0,
+        "base_shield": 1500.0,
+        "base_level": 1.0,
+        "base_dr": 1.0,
+        "health_type": "Machinery",
+        "armor_type": "None",
+        "shield_type": "Eidolon Shield",
+        "enemy_type": "ET_EIDOLON"
+    },
+    "Eidolon Teralyst": {
+        "base_health": 9000.0,
+        "base_armor": 125.0,
+        "base_shield": 0.0,
+        "base_level": 1.0,
+        "base_dr": 1.0,
+        "health_type": "Robotic",
+        "armor_type": "Alloy",
+        "shield_type": "None",
+        "enemy_type": "ET_EIDOLON"
+    },
+    "Eidolon Hydrolyst Shield": {
+        "base_health": 1e-06,
+        "base_armor": 0.0,
+        "base_shield": 2000.0,
+        "base_level": 1.0,
+        "base_dr": 1.0,
+        "health_type": "Machinery",
+        "armor_type": "None",
+        "shield_type": "Eidolon Shield",
+        "enemy_type": "ET_EIDOLON"
+    },
+    "Eidolon Hydrolyst": {
+        "base_health": 12000.0,
+        "base_armor": 150.0,
+        "base_shield": 0.0,
+        "base_level": 1.0,
+        "base_dr": 1.0,
+        "health_type": "Cloned Flesh",
+        "armor_type": "Alloy",
+        "shield_type": "None",
+        "enemy_type": "ET_EIDOLON"
+    },
+    "Eidolon Gantulyst": {
+        "base_health": 10000.0,
+        "base_armor": 130.0,
+        "base_shield": 0.0,
+        "base_level": 1.0,
+        "base_dr": 1.0,
+        "health_type": "Cloned Flesh",
+        "armor_type": "Alloy",
+        "shield_type": "None",
+        "enemy_type": "ET_EIDOLON"
+    },
+    "Eidolon Gantulyst Shield": {
+        "base_health": 1e-06,
+        "base_armor": 0.0,
+        "base_shield": 1800.0,
+        "base_level": 1.0,
+        "base_dr": 1.0,
+        "health_type": "Machinery",
+        "armor_type": "None",
+        "shield_type": "Eidolon Shield",
+        "enemy_type": "ET_EIDOLON"
+    },
+    "Armis Ulta": {
+        "base_health": 1000.0,
+        "base_armor": 50.0,
+        "base_shield": 2500.0,
+        "base_level": 1.0,
+        "base_dr": 1.0,
+        "health_type": "Flesh",
+        "armor_type": "Alloy",
+        "shield_type": "Shield",
+        "enemy_type": "ET_NORMAL"
+    },
+    "Arid Heavy Gunner": {
+        "base_health": 300.0,
+        "base_armor": 500.0,
+        "base_shield": 0.0,
+        "base_level": 8.0,
+        "base_dr": 1.0,
+        "health_type": "Cloned Flesh",
+        "armor_type": "Ferrite",
+        "shield_type": "None",
+        "enemy_type": "ET_NORMAL"
+    },
+    "Demolisher Expired": {
+        "base_health": 1500.0,
+        "base_armor": 50.0,
+        "base_shield": 0.0,
+        "base_level": 1.0,
+        "base_dr": 1.0,
+        "health_type": "Cloned Flesh",
+        "armor_type": "Ferrite",
+        "shield_type": "None",
+        "enemy_type": "ET_DEMOLISHER"
+    }
+}

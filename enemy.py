@@ -138,7 +138,7 @@ class Enemy:
         self.kill_time = 9999
 
         self.magnetic_multiplier = 1
-        self.viral_multiplier =1
+        self.viral_multiplier = 1
         self.corrosive_armor_strip = 1
         self.heat_armor_strip = 1
 
@@ -155,19 +155,13 @@ class Enemy:
             event_list[mindex].execute(self)
 
             # enemy state logging
-            if len(self.armor_event_list)==1:
-                self.armor_event_list.append((self.time, self.get_modified_armor()))
-            elif len(self.armor_event_list)>1 and self.get_modified_armor() != self.armor_event_list[-1][1]:
+            if self.get_modified_armor() != self.armor_event_list[-1][1]:
                 self.armor_event_list.append((self.time-1e-3, self.armor_event_list[-1][1]))
                 self.armor_event_list.append((self.time, self.get_modified_armor()))
-            if len(self.health_event_list)==1:
-                self.health_event_list.append((self.time, self.current_health))
-            elif self.current_health != self.health_event_list[-1][1]:
+            if self.current_health != self.health_event_list[-1][1]:
                 self.health_event_list.append((self.time-1e-3, self.health_event_list[-1][1]))
                 self.health_event_list.append((self.time, self.current_health))
-            if len(self.shield_event_list)==1:
-                self.shield_event_list.append((self.time, self.current_shield))
-            elif self.current_shield != self.shield_event_list[-1][1]:
+            if self.current_shield != self.shield_event_list[-1][1]:
                 self.shield_event_list.append((self.time-1e-3, self.shield_event_list[-1][1]))
                 self.shield_event_list.append((self.time, self.current_shield))
 
@@ -176,8 +170,7 @@ class Enemy:
                 return 
         self.kill_time = max(0.001, self.time)
 
-    def apply_damage(self, dmg, weapon_effect, proc = False):
-        shield_break = False
+    def apply_damage(self, dmg, weapon_effect, proc=False):
         self.total_unreduced_damage += sum(dmg)
         dmg = np.array(dmg)
         applied_shield_damage = 0
@@ -192,9 +185,11 @@ class Enemy:
         self.current_shield -= self.get_special_damage_reduction(applied_shield_damage, weapon_effect, proc=proc)
         self.current_health -= self.get_special_damage_reduction(applied_health_damage, weapon_effect, proc=proc)
 
+        if not (proc and dmg[3]) and not proc:
+            self.damage_instance_list.append(round(total_applied_damage - (self.current_health+self.current_shield),0))
+
         applied_health_damage = 0
         if self.current_shield < 0 and self.current_health>0:
-            shield_break = True
             ratio = abs(self.current_shield/applied_shield_damage)
             applied_health_damage += np.sum(multi_dot([dmg , self.health_modifiers , self.get_armor_reduction()]))* self.get_all_enemy_multipliers(constant.VT_HEALTH) * ratio
             self.current_health -= self.get_special_damage_reduction(applied_health_damage, weapon_effect, proc=proc)
@@ -207,11 +202,6 @@ class Enemy:
             self.base_armor -= 6
             self.current_armor = self.get_scaled_armor()*self.SP_armor_buff
 
-        if not shield_break:
-            # there are infinite possibilities of heat damage instances, so ignore them
-            # ignore all procs for now
-            if not (proc and dmg[3]) and not proc:
-                self.damage_instance_list.append(round(total_applied_damage - (self.current_health+self.current_shield),0))
         if self.current_health <0:
             self.current_health = 0
         total_applied_damage -= (self.current_health+self.current_shield)
@@ -242,7 +232,7 @@ class Enemy:
 
     def apply_beam_status(self, weapon_effect):
         # apply guaranteed status effects (>100% sc)
-        for i in range( int(weapon_effect.status_chance.modded * weapon_effect.multishot_state) ):
+        for i in range( int(weapon_effect.status_chance.modded * weapon_effect.weapon_state.multishot_state[0]) ):
             proc_roll = random()
             for i, sts in enumerate(weapon_effect.status_effect_chance):
                 if proc_roll <= sts:
@@ -251,7 +241,7 @@ class Enemy:
                 proc_roll -= sts
 
         # apply remaining status chance
-        if random()<( (weapon_effect.status_chance.modded*weapon_effect.multishot_state)%1 ):
+        if random()<( (weapon_effect.status_chance.modded*weapon_effect.weapon_state.multishot_state[0])%1 ):
             proc_roll = random()
             for i, sts in enumerate(weapon_effect.status_effect_chance):
                 if proc_roll <= sts:
@@ -290,29 +280,6 @@ class Enemy:
             overflow_health_damage = self.get_special_damage_reduction(overflow_health_damage * multi_madness, weapon_effect, crit_tier)
 
         return ( (applied_shield_damage), (applied_health_damage), (overflow_health_damage) )
-
-    def get_unreduced_damage_and_dps(self, dmg, weapon_effect, multi_madness = 1):
-        applied_shield_damage = 0
-        applied_health_damage = 0
-        dmg= np.array(dmg)
-        if self.current_shield > 0:
-            applied_shield_damage += np.sum(multi_dot([dmg , self.shield_modifiers , constant.SHIELD_MASK])) * self.get_all_enemy_multipliers(constant.VT_SHIELD)
-            applied_health_damage += np.sum(multi_dot([dmg , self.health_modifiers , constant.SHIELDED_HEALTH_MASK , self.get_armor_reduction()])) * self.get_all_enemy_multipliers(constant.VT_HEALTH)
-        else:
-            applied_health_damage += np.sum(multi_dot([dmg , self.health_modifiers , self.get_armor_reduction()])) * self.get_all_enemy_multipliers(constant.VT_HEALTH)
-
-        applied_shield_damage = applied_shield_damage * multi_madness
-        applied_health_damage = applied_health_damage * multi_madness
-
-        shield_dps = applied_shield_damage * weapon_effect.dps_multiplier
-        health_dps = applied_health_damage * weapon_effect.dps_multiplier
-
-        # Weird shotgun mechanic
-        if weapon_effect.pellets.base > 1:
-            shield_dps = shield_dps/2
-            health_dps = health_dps/2
-
-        return ( applied_shield_damage, applied_health_damage ,shield_dps, health_dps)
 
     class Modifier:
         '''
@@ -447,16 +414,6 @@ class Enemy:
             t = (self.level-self.base_level-70)/10
             s = 3*t**2-2*t**3
             return self.base_armor*f1*(1-s)+f2*s
-
-    def get_modifier_armor_reduction(self, index):
-        armr = self.current_armor * self.corrosive_armor_strip * self.heat_armor_strip
-        if int(armr) > 0:
-            if index ==14:
-                return 1
-            else:
-                return self.armor_modifiers[index]/(1+(2-self.armor_modifiers[index])*armr/300)
-        else:
-            return 1
     
     def get_armor_reduction(self):
         armr = self.current_armor * self.corrosive_armor_strip * self.heat_armor_strip

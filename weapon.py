@@ -49,6 +49,7 @@ class WeaponEffect:
         self.weapon = weapon
         self.fire_mode_name = weapon.fire_mode_name
         self.se_name = se_name
+        self.stk = 0
 
         self.proc_immunity = np.array([1]*20)
 
@@ -85,9 +86,9 @@ class WeaponEffect:
         self.status_chance = self.WeaponProperty( self.get_base_property(fm, se, "procChance", default_val=0) )
         self.reload_speed = self.WeaponProperty( self.get_base_property(fm, se, "reloadTime", default_val=0) )
         self.magazine_size = self.WeaponProperty( self.get_base_property(fm, se, "magazineSize", default_val=1) )
-        self.ammo_capacity = self.WeaponProperty( self.get_base_property(fm, se, "ammo", default_val=1) )
-        self.charge_time = self.WeaponProperty( self.get_base_property(fm, se, "chargeTime", default_val=1) )
-        self.embed_delay = self.WeaponProperty( self.get_base_property(fm, se, "embedDelay", default_val=1) )
+        self.ammo_capacity = self.WeaponProperty( self.get_base_property(fm, se, "ammo", default_val=540) )
+        self.charge_time = self.WeaponProperty(fm.get("chargeTime", 0)) if self.se_name is not None else self.WeaponProperty( self.get_base_property(fm, se, "chargeTime", default_val=0))
+        self.embed_delay = self.WeaponProperty( self.get_base_property(fm, se, "embedDelay", default_val=0) + fm.get("embedDelay", 0) ) if self.se_name is not None else self.WeaponProperty( self.get_base_property(fm, se, "embedDelay", default_val=0))
         self.ammo_cost = self.WeaponProperty( self.get_base_property(fm, se, "ammoCost", default_val=1) )
         self.headshot_bonus = self.WeaponProperty( 1 )
 
@@ -111,8 +112,8 @@ class WeaponEffect:
         self.base_damage.modded[6]+=        self.total_base_damage.modded * self.weapon.mod_config.toxin_damage 
         self.base_damage.modded =           self.base_damage.modded.clip(min=0)
 
-        self.critical_chance.modded =       max(0, self.critical_chance.base * self.weapon.mod_config.critical_chance)
-        self.critical_multiplier.modded =   max(0, self.critical_multiplier.base * self.weapon.mod_config.critical_multiplier * self.weapon.mod_config.critical_damage_multiplier)
+        self.critical_chance.modded =       max(0, (self.critical_chance.base + self.weapon.mod_config.critical_chance_base) * self.weapon.mod_config.critical_chance + self.weapon.mod_config.critical_chance_final)
+        self.critical_multiplier.modded =   max(0, self.critical_multiplier.base * self.weapon.mod_config.critical_multiplier + self.weapon.mod_config.critical_multiplier_final) * self.weapon.mod_config.critical_damage_multiplier
         self.pellets.modded =               max(0, self.pellets.base * self.weapon.mod_config.multishot if self.se_name is None else self.pellets.base)
         self.fire_rate.modded =             max(1/20, self.fire_rate.base * self.weapon.mod_config.fire_rate)
         self.status_chance.modded =         max(0, self.status_chance.base * self.weapon.mod_config.status_chance)
@@ -122,7 +123,7 @@ class WeaponEffect:
         self.charge_time.modded =           self.charge_time.base/max( 0.05, self.weapon.mod_config.fire_rate)
         self.embed_delay.modded =           self.embed_delay.base/max( 0.05, self.weapon.mod_config.fire_rate)
         self.headshot_bonus.modded =        1
-        self.ammo_cost.modded =             max( 0, self.ammo_cost.base )
+        self.ammo_cost.modded =             max( 0, self.ammo_cost.base )          
 
         self.current_magazine = self.magazine_size.modded
         self.min_critical_tier = int(self.critical_chance.modded)
@@ -164,11 +165,15 @@ class WeaponEffect:
         status_proportions = np.multiply(self.base_damage.modded, self.proc_immunity)
         self.status_effect_chance =  np.array([0]*20) if np.sum(status_proportions) == 0 else status_proportions/np.sum(status_proportions)
 
+        if self.weapon.name == 'Acrid':
+            self.status_effect_chance[6] += 1
+
         # quantize
         self.base_damage.modded = np.round(self.base_damage.modded/self.quantum, 0)*self.quantum
 
     def execute(self, enemy):
-        plts = self.weapon_state.multishot_state[0]
+        self.stk += 1
+        plts = self.weapon_state.multishot_state[0] if len(self.weapon_state.multishot_state)>0 else int(self.pellets.base)
         if self.se_name is None:
             if self.trigger == 'HELD':
                 enemy.apply_damage( self.base_damage.modded*plts, self)
@@ -194,7 +199,8 @@ class WeaponEffect:
                         enemy.apply_damage(self.base_damage.modded, self)
                         enemy.apply_status(self)
                         self.weapon_state.roll_crit_and_status()
-                self.weapon_state.multishot_state.pop(0)
+                if len(self.weapon_state.multishot_state)>0:
+                    self.weapon_state.multishot_state.pop(0) 
 
         if self.weapon_state.stance_proc:
             self.apply_proc(2)
@@ -204,13 +210,14 @@ class WeaponEffect:
     def end_fire_event(self):
         #   Secondary effects inherit the charge and embed delay of primary effect. This is how it schedules things. If the secondary effect somehow has a charge time and/or an embed delay
         #   it will have to be user defined to account for the primary fire charge/embed delay as well. The only requirement is the secondary effect should have at least the same charge/embed as main effect
+        # Dont add embed delay dummy!
         if self.current_magazine - self.ammo_cost.modded > 0:
             self.current_magazine -= self.ammo_cost.modded
-            self.next_event += 1/self.fire_rate.modded + self.charge_time.modded + self.embed_delay.modded
+            self.next_event += 1/self.fire_rate.modded + self.charge_time.modded
         #   Reload
         else:
             self.current_magazine = self.magazine_size.modded
-            self.next_event += max(self.reload_speed.modded, 1/self.fire_rate.modded) + self.charge_time.modded + self.embed_delay.modded
+            self.next_event += max(self.reload_speed.modded, 1/self.fire_rate.modded) + self.charge_time.modded
 
         self.weapon_state.roll_multishot()
 
@@ -222,6 +229,7 @@ class WeaponEffect:
     
     def reset(self):
         self.next_event = self.charge_time.modded + self.embed_delay.modded + self.delay
+        self.stk = 0
         self.weapon_state.reset()
         
     def get_next_event_time(self):
@@ -239,7 +247,7 @@ class WeaponEffect:
             self.current_critical_tier = 0
             self.crit_enhance_proc = 0
             self.status_proc = 0
-            self.multishot_state = [self.weapon_effect.pellets.base]
+            self.multishot_state = [int(self.weapon_effect.pellets.base)]
 
             self.stance_index = 0
             self.stance_multiplier = self.weapon_effect.stance_multiplier_list[self.stance_index] if self.weapon_effect.weapon.mod_config.stance_equipped else 1
@@ -281,6 +289,7 @@ class WeaponEffect:
             self.roll_multishot()
             self.roll_crit_and_status()
 
+
 class ModConfig():
     def __init__(self, ui) -> None:
         self.stance_name = ui.custom_build_stance_combo.currentText()
@@ -289,7 +298,10 @@ class ModConfig():
 
         self.base_damage = parse_text(ui.base_damage_mod_textbox.toPlainText())
         self.critical_chance = parse_text(ui.critical_chance_mod_textbox.toPlainText())
+        self.critical_chance_final = parse_text(ui.critical_chance_mod_textbox.toPlainText(), base=0, parse_rule=constant.FINAL_ADDITIVE_RULE)
+        self.critical_chance_base = parse_text(ui.critical_chance_mod_textbox.toPlainText(), base=0, parse_rule=constant.BASE_ADDITIVE_RULE)
         self.critical_multiplier = parse_text(ui.critical_damage_mod_textbox.toPlainText())
+        self.critical_multiplier_final = parse_text(ui.critical_damage_mod_textbox.toPlainText(), base=0, parse_rule=constant.FINAL_ADDITIVE_RULE)
         self.critical_damage_multiplier = parse_text( ui.critical_damage_multiplier_mod_textbox.toPlainText(), mod_type=constant.T_MULTIPLIER )
         self.multishot = parse_text(ui.multishot_mod_textbox.toPlainText())
         self.fire_rate = parse_text(ui.fire_rate_mod_textbox.toPlainText())
@@ -321,6 +333,9 @@ class ModConfig():
 
         self.status_duration = parse_text(ui.status_duration_mod_textbox.toPlainText(), base=0)
 
+        self.toxin_multishot = parse_text(ui.total_toxin_mod_textbox.toPlainText(), base=0)
+        self.void_multishot = parse_text(ui.total_void_mod_textbox.toPlainText(), base=0)
+
         # elemental mod order
         self.corrosive_ordering = ui.corrosive_check_box.isChecked()
         self.blast_ordering = ui.blast_check_box.isChecked()
@@ -334,9 +349,9 @@ class ModConfig():
 
 
 '''Text Modifier:  "ue" prefix - uncombinable elemental, only applies to elemental groups Ex: ue100.0'''
-def parse_text(txt, base=1, mod_type=constant.T_BASE):
+def parse_text(txt, base=1, mod_type=constant.T_BASE, parse_rule=constant.BASE_RULE):
     if mod_type == constant.T_BASE:
-        return base+sum([float(i) for i in re.findall(constant.BASE_RULE, txt)])/100
+        return base+sum([float(i) for i in re.findall(parse_rule, txt)])/100
     elif mod_type == constant.T_UNCOMBINED:
         return base+sum([float(i) for i in re.findall(constant.UNCOMBINED_RULE, txt)])/100
     elif mod_type == constant.T_MULTIPLIER:

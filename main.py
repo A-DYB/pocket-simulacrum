@@ -1,7 +1,6 @@
 # This Python file uses the following encoding: utf-8
 import json
 import matplotlib.pyplot as plt
-from matplotlib import colors as mcolors
 import os
 from pathlib import Path
 import random
@@ -18,6 +17,7 @@ from PySide6 import QtCore, QtWidgets, QtGui
 from enemy import Enemy
 from weapon import Weapon
 from ui_mainwindow import Ui_Window
+from weapon_updater import download_weapons
 
 import statistics
 import seaborn as sns
@@ -32,14 +32,7 @@ class Window(QWidget):
         self.ui=None
         self.load_ui()
 
-        #self.ui = Ui_Window()
-        #self.ui.setupUi(self)
-
         self.fig, (self.ax, self.ax2) = plt.subplots(1,2)
-        colors = dict(mcolors.BASE_COLORS, **mcolors.CSS4_COLORS)
-        # Sort colors by hue, saturation, value and name.
-        by_hsv = sorted((tuple(mcolors.rgb_to_hsv(mcolors.to_rgba(color)[:3])), name) for name, color in colors.items())
-        self.plot_colors = [name for hsv, name in by_hsv]
 
         self.elemental_display_labels = [       self.ui.label_e1, self.ui.label_e2, self.ui.label_e3, self.ui.label_e4, self.ui.label_e5, self.ui.label_e6, self.ui.label_e7, 
                                                 self.ui.label_e8, self.ui.label_e9, self.ui.label_e10, self.ui.label_e11, self.ui.label_e12, self.ui.label_e13 ]
@@ -79,14 +72,11 @@ class Window(QWidget):
         self.ui.edit_weapon_stance_label.setEnabled(False)
 
         self.ui.custom_build_weapon_combo.currentIndexChanged.connect(self.custom_build_weapon_combo_listener)
-        #self.ui.custom_build_fire_mode_combo.currentIndexChanged.connect(self.custom_build_fire_mode_combo_listener)
         self.ui.custom_build_weapon_combo.currentIndexChanged.connect(self.update_display_build_table)
         self.ui.custom_build_fire_mode_combo.currentIndexChanged.connect(self.update_display_build_table)
         self.ui.custom_build_stance_moveset_combo.currentIndexChanged.connect(self.update_display_build_table)
         self.ui.weapon_effect_display_combo.currentIndexChanged.connect(self.update_display_build_table)
         self.ui.custom_build_fire_mode_combo.currentIndexChanged.connect(self.fire_mode_swap_event)
-
-        # self.ui.custom_build_mod_table.itemChanged.connect(self.update_display_build_table)
         self.custom_build_mod_list = [
                                         self.ui.base_damage_mod_textbox,
                                         self.ui.multishot_mod_textbox,
@@ -140,6 +130,7 @@ class Window(QWidget):
 
         self.ui.edit_weapon_combo.currentIndexChanged.connect(self.edit_weapon_combo_listener)
         self.ui.edit_fire_mode_radio.toggled.connect(self.edit_fire_mode_radio_listener)
+        self.ui.edit_secondary_effect_radio.toggled.connect(self.secondary_effects_combo_listener)
         self.ui.edit_fire_mode_combo.currentIndexChanged.connect(self.edit_fire_mode_combo_listener)
         self.ui.edit_secondary_effect_combo.currentIndexChanged.connect(self.secondary_effects_combo_listener)
         self.ui.custom_build_stance_combo.currentIndexChanged.connect(self.custom_build_stance_combo_listener)
@@ -153,11 +144,10 @@ class Window(QWidget):
         self.ui.edit_weapon_save_component_button.clicked.connect(self.save_weapon)
         self.ui.edit_weapon_remove_component_push_button.clicked.connect(self.delete_component)
         self.ui.edit_weapon_remove_weapon_push_button.clicked.connect(self.delete_weapon)
+        self.ui.download_weapon_button.clicked.connect(self.update_weapon_file)
 
         self.ui.custom_build_save_button.clicked.connect(self.save_build)
         self.ui.build_select_combo.currentIndexChanged.connect(self.load_build)
-
-        self.ui.save_data_button.clicked.connect(self.save_data)
 
         self.ui.simulate_button.clicked.connect(self.simulate)
         self.ui.simulate_once_button.clicked.connect(self.simulate_once)
@@ -171,15 +161,6 @@ class Window(QWidget):
 
         self.ui.riven_simulation_count_slider.sliderMoved.connect(self.riven_simcount_slider_event)
 
-        self.merge_weapon_data()
-
-        '''
-        QtCore.QSignalBlocker(self.ui.custom_build_weapon_combo),
-        QtCore.QSignalBlocker(self.ui.custom_build_fire_mode_combo),
-        QtCore.QSignalBlocker(self.ui.custom_build_stance_combo),
-        QtCore.QSignalBlocker(self.ui.custom_build_stance_moveset_combo),
-        '''
-
         self.mod_blockers = [ QtCore.QSignalBlocker( f ) for f in self.custom_build_mod_list ]
         self.blockers = self.mod_blockers + [
                         QtCore.QSignalBlocker(self.ui.corrosive_check_box),
@@ -188,9 +169,17 @@ class Window(QWidget):
                         QtCore.QSignalBlocker(self.ui.magnetic_check_box),
                         QtCore.QSignalBlocker(self.ui.radiation_check_box),
                         QtCore.QSignalBlocker(self.ui.gas_check_box)]
+        self.combo_blockers = [
+                        QtCore.QSignalBlocker(self.ui.edit_weapon_combo),
+                        QtCore.QSignalBlocker(self.ui.edit_fire_mode_combo),
+                        QtCore.QSignalBlocker(self.ui.edit_secondary_effect_combo)]
+        for bl in self.combo_blockers:
+            bl.unblock()
 
         for bl in self.blockers:
             bl.unblock()
+
+        self.merge_weapon_data()
 
     def load_ui(self):
         loader = QUiLoader()
@@ -216,7 +205,6 @@ class Window(QWidget):
         palette.setColor(QtGui.QPalette.Highlight, QtGui.QColor(42, 130, 218))
         palette.setColor(QtGui.QPalette.HighlightedText, QtGui.QColor("black"))
         return palette
-
     
     def simulate(self, enemy_level = None, min_iterations = 100, max_iterations = 200, plot = True):
         kill_time_list = []
@@ -230,6 +218,8 @@ class Window(QWidget):
         heat_dps = []
         electric_dps =[]
         gas_dps = []
+
+        stk_list = []
 
         enemy_name = self.ui.enemy_select_combo.currentText()
         if enemy_level is None:
@@ -257,6 +247,8 @@ class Window(QWidget):
             electric_dps.append(enemy.electric_proc_manager.total_applied_damage/enemy.kill_time)
             gas_dps.append(enemy.gas_proc_manager.total_applied_damage/enemy.kill_time)
 
+            stk_list.append(weapon.weapon_effects[0].stk)
+
         s_stdev = statistics.stdev(kill_time_list)
         s_mean = sum(kill_time_list)/len(kill_time_list)
         n = (1.96 * s_stdev / max(0.1, 0.05 * s_mean) ) ** 2
@@ -279,6 +271,8 @@ class Window(QWidget):
             electric_dps.append(enemy.electric_proc_manager.total_applied_damage/enemy.kill_time)
             gas_dps.append(enemy.gas_proc_manager.total_applied_damage/enemy.kill_time)
 
+            stk_list.append(weapon.weapon_effects[0].stk)
+
             if time.time() - start_time > 5:
                 print("Simulation took longer than 5 seconds, ending simulation at %u/%u + %d iterations"%(i+1,max(0, int(n)-min_iterations),min_iterations))
                 break
@@ -286,16 +280,18 @@ class Window(QWidget):
         print("Iterations: %u"%int(i+min_iterations+1))
         print("AVG TTK: ",sum(kill_time_list)/len(kill_time_list))
         print("Simulation took %f seconds"%(time.time() - start_time))
+
         avg_ttk = np.average(np.array(kill_time_list))
+        avg_stk = np.average(stk_list)
 
         self.ui.ttk_mean_textbox.setPlainText("%.2f s"%( avg_ttk ) )
-        # self.ui.dps_mean_textbox.setPlainText("%.2f"%( sum(dps)/len(dps) ) )
         self.ui.dps_mean_textbox.setPlainText(f"{sum(dps)/len(dps):,.2f}" )
+        self.ui.stk_mean_textbox.setPlainText("%.1f"%( avg_stk ) )
 
         self.ui.ttk_std_textbox.setPlainText("%.2f s"%( np.std(kill_time_list) ) )
         self.ui.dps_std_textbox.setPlainText(f"{np.std(dps):,.2f}" )
+        self.ui.stk_std_textbox.setPlainText("%.1f"%( np.std(stk_list) ) )
 
-        # self.ui.slash_dps_mean_textbox.setPlainText("%.2f"%( sum(slash_dps)/len(slash_dps) ) )
         self.ui.slash_dps_mean_textbox.setPlainText(f"{sum(slash_dps)/len(slash_dps):,.2f}" )
         self.ui.toxin_dps_mean_textbox.setPlainText(f"{sum(toxin_dps)/len(toxin_dps):,.2f}" )
         self.ui.electric_dps_mean_textbox.setPlainText(f"{sum(electric_dps)/len(electric_dps):,.2f}" )
@@ -352,7 +348,6 @@ class Window(QWidget):
             plt.tight_layout()
             plt.show()
             self.fig.canvas.draw() 
-            
 
         return (enemy_level, sum(kill_time_list)/len(kill_time_list))
 
@@ -365,8 +360,10 @@ class Window(QWidget):
 
         self.ui.ttk_mean_textbox.setPlainText("%.2f s"%( enemy.kill_time ) )
         self.ui.dps_mean_textbox.setPlainText("%.2f"%( (enemy.max_health+enemy.max_shield)/enemy.kill_time ) )
+        self.ui.stk_mean_textbox.setPlainText("%.2f"%( weapon.weapon_effects[0].stk ))
         self.ui.ttk_std_textbox.setPlainText("N/A")
         self.ui.dps_std_textbox.setPlainText("N/A")
+        self.ui.stk_std_textbox.setPlainText("N/A")
 
         self.ui.slash_dps_mean_textbox.setPlainText("%.2f"%( enemy.slash_proc_manager.total_applied_damage/enemy.kill_time ) )
         self.ui.toxin_dps_mean_textbox.setPlainText("%.2f"%( enemy.toxin_proc_manager.total_applied_damage/enemy.kill_time ) )
@@ -383,17 +380,16 @@ class Window(QWidget):
         if not plt.get_fignums():
             self.fig, (self.ax, self.ax2) = plt.subplots(1,2)
 
-        time, val = list(zip(*enemy.health_event_list))
-        sns.lineplot(x=time, y=val, ci = None, ax=self.ax)
+        time, val = [list(t) for t in zip(*enemy.health_event_list)]
+        sns.lineplot(x=time+[enemy.kill_time,enemy.kill_time*1.1], y=val+[0,0], ci = None, ax=self.ax)
         time, val = list(zip(*enemy.shield_event_list))
         sns.lineplot(x=time, y=val, ci = None, ax=self.ax)
         time, val = list(zip(*enemy.armor_event_list))
         sns.lineplot(x=time, y=val, ci = None, ax=self.ax)
 
         self.ax2.clear()
-        data_dict = {"Applied Damage":enemy.damage_instance_list}
-        sns.countplot(data=data_dict, x="Applied Damage", ax = self.ax2)
-        #self.ax2.xticks(rotation=45)
+        data_dict = {"Damage Instance":enemy.damage_instance_list}
+        sns.countplot(data=data_dict, x="Damage Instance", ax = self.ax2)
         self.ax2.tick_params(axis='x', labelrotation = 45)
         total = len(enemy.damage_instance_list)
         for p in self.ax2.patches:
@@ -403,7 +399,6 @@ class Window(QWidget):
             self.ax2.annotate(percentage, (x, y), ha='center', va='center')
         
         self.ax.text(enemy.kill_time,0, "---------------%s %s, %.1fs"%(self.ui.custom_build_weapon_combo.currentText(), self.ui.custom_build_fire_mode_combo.currentText(), enemy.kill_time), rotation=90, ha='center', va='baseline' )
-        #self.ax.text(avg_ttk,0, "%.1fs"%(avg_ttk), rotation=90, va='top' )
         self.ax.set_xlabel("Time (s)")
         self.ax.set_ylabel("Enemy Life Points")
         plt.show()
@@ -411,7 +406,6 @@ class Window(QWidget):
         self.fig.canvas.draw() 
 
         print("Kill time: %f"%enemy.kill_time)
-
     
     def scale(self):
         x=[]
@@ -676,9 +670,7 @@ class Window(QWidget):
             self.ui.edit_enemy_type_combo.setCurrentIndex(self.ui.edit_enemy_type_combo.findText(enemy_data[enemy_name]["enemy_type"]))
             self.ui.edit_enemy_health_type_combo.setCurrentIndex(self.ui.edit_enemy_health_type_combo.findText(enemy_data[enemy_name]["health_type"]))
             self.ui.edit_enemy_armor_combo.setCurrentIndex(self.ui.edit_enemy_armor_combo.findText(enemy_data[enemy_name]["armor_type"]))
-            self.ui.edit_enemy_shield_combo.setCurrentIndex(self.ui.edit_enemy_shield_combo.findText(enemy_data[enemy_name]["shield_type"]))
-
-    
+            self.ui.edit_enemy_shield_combo.setCurrentIndex(self.ui.edit_enemy_shield_combo.findText(enemy_data[enemy_name]["shield_type"]))  
 
     def custom_build_stance_combo_listener(self):
         if self.ui.custom_build_stance_combo.currentText() != '':
@@ -782,6 +774,7 @@ class Window(QWidget):
         #clear fire_mode_combo
         self.ui.edit_secondary_effect_combo.clear()
         self.ui.edit_secondary_effect_combo.addItem("New Secondary Effect")
+
     def load_stats(self):
         with open('./weapon_data.json') as f:
             weapon_data = json.load(f)
@@ -875,6 +868,10 @@ class Window(QWidget):
             self.ui.enemy_type_display_textbox.setPlainText(enemy.enemy_type)
             self.ui.level_display_textbox.setPlainText(f"{enemy.level:,.0f}")
 
+            self.ui.health_type_display_textbox.setPlainText(enemy.health_type)
+            self.ui.armor_type_display_textbox.setPlainText(enemy.armor_type)
+            self.ui.shield_type_display_textbox.setPlainText(enemy.shield_type)
+
             crit_tier = self.ui.display_weapon_critical_tier_spinner.value()
 
             if weapon.weapon_effects[0].trigger == "HELD":
@@ -948,76 +945,6 @@ class Window(QWidget):
         if weapon is not None:
             self.ui.weapon_effect_display_combo.clear()
             self.ui.weapon_effect_display_combo.addItems([weapon.fire_mode_name]+get_secondary_effect_list(weapon.name, weapon.fire_mode_name))
-    
-    def save_data(self):
-        weapon = self.custom_build_init_weapon()
-        weapon_effect = weapon.weapon_effects[0]
-
-        txt = self.ui.data_text.toPlainText()
-        in_game_damage = text_config_to_double(txt)
-        with open(weapon.name+'.json', 'r') as data_file:
-            save_data = json.load(data_file)
-
-        enemy_name = self.ui.enemy_select_combo.currentText()
-        if enemy_name != '' and weapon is not None:
-            enemy_level = self.ui.enemy_level_spinner.value()
-            enemy = Enemy(enemy_name, enemy_level, self.ui)
-            crit_tier = self.ui.display_weapon_critical_tier_spinner.value()
-            cd = enemy.get_critical_damage_state(weapon.weapon_effects[0], crit_tier)
-            cdm = weapon.critical_multiplier_mods
-
-            if weapon.weapon_effects[0].trigger == "HELD":
-                sh_dmg1, hp_dmg1, sh_dps1, hp_dps1 = enemy.get_unreduced_damage_and_dps( weapon.weapon_effects[0].base_damage.modded, weapon.weapon_effects[0], int(weapon.weapon_effects[0].pellets.modded))
-                sh_dmg2, hp_dmg2, sh_dps2, hp_dps2 = enemy.get_unreduced_damage_and_dps( weapon.weapon_effects[0].base_damage.modded, weapon.weapon_effects[0], int(weapon.weapon_effects[0].pellets.modded)+1)
-
-                new_data = {
-                    "trigger": weapon.weapon_effects[0].trigger,
-                    "mulishot": weapon.weapon_effects[0].pellets.modded,
-                    "criticalMultiplier": cd,
-                    "baseCriticalMultiplier":weapon_effect.base_critical_multiplier,
-                    "criticalMultiplierMods": cdm,
-                    "critTier":crit_tier,
-                    "enemyName": enemy.name,
-                    "enemyArmor": enemy.current_armor,
-                    "inGameDamage": in_game_damage,
-                    "shieldDamage1": sh_dmg1,
-                    "shieldDamage2": sh_dmg2,
-                    "healthDamage1": hp_dmg1,
-                    "healthDamage2": hp_dmg2,
-
-                    "shieldDPS1": sh_dps1,
-                    "shieldDPS2": sh_dps2,
-                    "healthDPS1": hp_dps1,
-                    "healthDPS2": hp_dps2
-                            }
-            else:
-                sh_dmg, hp_dmg, sh_dps, hp_dps = enemy.get_unreduced_damage_and_dps( weapon.weapon_effects[0].base_damage.modded, weapon.weapon_effects[0])
-
-                new_data = {
-                    "trigger": weapon.weapon_effects[0].trigger,
-                    "mulishot": weapon.weapon_effects[0].pellets.modded,
-                    "criticalMultiplier": cd,
-                    "baseCriticalMultiplier":weapon_effect.base_critical_multiplier,
-                    "criticalMultiplierMods": cdm,
-                    "critTier":crit_tier,
-                    "enemyName": enemy.name,
-                    "enemyArmor": enemy.current_armor,
-                    "inGameDamage": in_game_damage,
-                    "shieldDamage1": sh_dmg,
-                    "shieldDamage2": sh_dmg,
-                    "healthDamage1": hp_dmg,
-                    "healthDamage2": hp_dmg,
-
-                    "shieldDPS1": sh_dps,
-                    "shieldDPS2": sh_dps,
-                    "healthDPS1": hp_dps,
-                    "healthDPS2": hp_dps
-                            }
-
-        save_data.append(new_data)
-
-        with open(weapon.name+'.json', 'w') as f:
-            json.dump(save_data, f)
 
     def save_enemy(self):
         with open('./enemy_data.json') as f:
@@ -1061,12 +988,18 @@ class Window(QWidget):
         self.update_enemy_tables()
 
     def update_enemy_combos(self):
+        eec_index = self.ui.edit_enemy_combo.currentIndex()
         self.ui.edit_enemy_combo.clear()
         self.ui.edit_enemy_combo.addItem("New Enemy")
         self.ui.edit_enemy_combo.addItems(get_enemy_list())
+        eec_index = eec_index if eec_index<self.ui.edit_enemy_combo.count() else self.ui.edit_enemy_combo.count()-1
+        self.ui.edit_enemy_combo.setCurrentIndex(eec_index)
 
+        esc_index = self.ui.enemy_select_combo.currentIndex()
         self.ui.enemy_select_combo.clear()
         self.ui.enemy_select_combo.addItems(get_enemy_list())
+        esc_index = esc_index if esc_index<self.ui.enemy_select_combo.count() else self.ui.enemy_select_combo.count()-1
+        self.ui.enemy_select_combo.setCurrentIndex(esc_index)
 
     def save_weapon(self):
         with open('./weapon_data.json') as f:
@@ -1254,12 +1187,28 @@ class Window(QWidget):
             self.update_weapon_combos()
 
     def update_weapon_combos(self):
+        cbwc_index = self.ui.custom_build_weapon_combo.currentIndex()
         self.ui.custom_build_weapon_combo.clear()
         self.ui.custom_build_weapon_combo.addItems(get_weapon_list())
+        
 
+        ewc_index = self.ui.edit_weapon_combo.currentIndex()
+        fm_index = self.ui.edit_fire_mode_combo.currentIndex()
+        se_index = self.ui.edit_secondary_effect_combo.currentIndex()
         self.ui.edit_weapon_combo.clear()
         self.ui.edit_weapon_combo.addItem("New Weapon")
         self.ui.edit_weapon_combo.addItems(get_weapon_list())
+
+        #reset indexes
+        cbwc_index = cbwc_index if cbwc_index<self.ui.custom_build_weapon_combo.count() else self.ui.custom_build_weapon_combo.count()-1
+        self.ui.custom_build_weapon_combo.setCurrentIndex(cbwc_index)
+
+        ewc_index = ewc_index if ewc_index<self.ui.edit_weapon_combo.count() else self.ui.edit_weapon_combo.count()-1
+        self.ui.edit_weapon_combo.setCurrentIndex(ewc_index)
+        fm_index = fm_index if fm_index<self.ui.edit_fire_mode_combo.count() else self.ui.edit_fire_mode_combo.count()-1
+        self.ui.edit_fire_mode_combo.setCurrentIndex(fm_index)
+        se_index = se_index if se_index<self.ui.edit_secondary_effect_combo.count() else self.ui.edit_secondary_effect_combo.count()-1
+        self.ui.edit_secondary_effect_combo.setCurrentIndex(se_index)
 
     def save_build(self):
         with open('./build_data.json') as f:
@@ -1411,6 +1360,11 @@ class Window(QWidget):
     
     def riven_simcount_slider_event(self):
         self.ui.riven_simulation_count_textbox.setPlainText("%d"%self.ui.riven_simulation_count_slider.value())
+
+    def update_weapon_file(self):
+        download_weapons()
+        self.merge_weapon_data()
+
 
 def get_weapon_list():
     with open('./weapon_data.json') as f:
